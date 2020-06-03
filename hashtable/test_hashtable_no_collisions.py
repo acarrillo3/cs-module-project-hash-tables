@@ -1,71 +1,206 @@
-"""
-This is the same test, but with big hash tables that are _unlikely_ to
-have collisions after the 3 inserts we do.
+class HashTableEntry:
+    """
+    Linked List hash table key/value pair
+    """
+    def __init__(self, key, value):
+        self.key = key
+        self.value = value
+        self.next = None
 
-Does not collide with DJB2 or FNV-1-64. But could collide with other hashes.
-"""
 
-import unittest
-from hashtable import HashTable
+# Hash table can't have fewer than this many slots
+MIN_CAPACITY = 8
 
-class TestHashTable(unittest.TestCase):
+class HashTable:
+    """
+    A hash table that with `capacity` buckets
+    that accepts string keys
+    Implement this.
+    """
 
-    def test_hash_table_insertion_and_retrieval(self):
-        ht = HashTable(0x10000)
+    def __init__(self, capacity):
+        # Your code here
+        self.capacity = capacity
+        self.data = [None] * capacity
+        self.used_slots = 0
 
-        ht.put("key-0", "val-0")
-        ht.put("key-1", "val-1")
-        ht.put("key-2", "val-2")
 
-        return_value = ht.get("key-0")
-        self.assertTrue(return_value == "val-0")
-        return_value = ht.get("key-1")
-        self.assertTrue(return_value == "val-1")
-        return_value = ht.get("key-2")
-        self.assertTrue(return_value == "val-2")
+    def get_num_slots(self):
+        """
+        Return the length of the list you're using to hold the hash
+        table data. (Not the number of items stored in the hash table,
+        but the number of slots in the main list.)
+        One of the tests relies on this.
+        Implement this.
+        """
+        # Your code here
+        return self.capacity
 
-    def test_hash_table_pution_overwrites_correctly(self):
-        ht = HashTable(0x10000)
 
-        ht.put("key-0", "val-0")
-        ht.put("key-1", "val-1")
-        ht.put("key-2", "val-2")
+    def get_load_factor(self):
+        """
+        Return the load factor for this hash table.
+        Implement this.
+        """
+        # Your code here
+        return self.used_slots / self.capacity
 
-        ht.put("key-0", "new-val-0")
-        ht.put("key-1", "new-val-1")
-        ht.put("key-2", "new-val-2")
+    def fnv1(self, key):
+        """
+        FNV-1 Hash, 64-bit
+        Implement this, and/or DJB2.
+        """
 
-        return_value = ht.get("key-0")
-        self.assertTrue(return_value == "new-val-0")
-        return_value = ht.get("key-1")
-        self.assertTrue(return_value == "new-val-1")
-        return_value = ht.get("key-2")
-        self.assertTrue(return_value == "new-val-2")
+        # Your code here
 
-    def test_hash_table_removes_correctly(self):
-        ht = HashTable(0x10000)
 
-        ht.put("key-0", "val-0")
-        ht.put("key-1", "val-1")
-        ht.put("key-2", "val-2")
+    def djb2(self, key):
+        """
+        DJB2 hash, 32-bit
+        Implement this, and/or FNV-1.
+        """
+        # Your code here
+        hash = 5381
+        for c in key:
+            hash = (hash * 33) + ord(c)
+        return hash
 
-        return_value = ht.get("key-0")
-        self.assertTrue(return_value == "val-0")
-        return_value = ht.get("key-1")
-        self.assertTrue(return_value == "val-1")
-        return_value = ht.get("key-2")
-        self.assertTrue(return_value == "val-2")
 
-        ht.delete("key-2")
-        ht.delete("key-1")
-        ht.delete("key-0")
+    def hash_index(self, key):
+        """
+        Take an arbitrary key and return a valid integer index
+        between within the storage capacity of the hash table.
+        """
+        #return self.fnv1(key) % self.capacity
+        return self.djb2(key) % self.capacity
 
-        return_value = ht.get("key-0")
-        self.assertTrue(return_value is None)
-        return_value = ht.get("key-1")
-        self.assertTrue(return_value is None)
-        return_value = ht.get("key-2")
-        self.assertTrue(return_value is None)
+    def put(self, key, value):
+        """
+        Store the value with the given key.
+        Hash collisions should be handled with Linked List Chaining.
+        Implement this.
+        """
+        # Your code here
+        slot = self.hash_index(key)
+        if self.data[slot] is None:
+            self.used_slots += 1
+            self.data[slot] = HashTableEntry(key, value)
+        else:
+            current = self.data[slot]
+            prev = current
+            while current is not None:
+                if current.key == key:
+                    current.value = value
+                    return
 
-if __name__ == '__main__':
-    unittest.main()
+                prev = current
+                current = current.next
+            
+            prev.next = HashTableEntry(key, value)
+
+
+    def delete(self, key):
+        """
+        Remove the value stored with the given key.
+        Print a warning if the key is not found.
+        Implement this.
+        """
+        # Your code here
+        slot = self.hash_index(key)
+        hash_entry = self.data[slot]
+
+        if hash_entry is None:
+            return None
+        else:
+            current = self.data[slot]
+            prev = current
+
+            if self.data[slot].key == key:
+                value = current.value
+                self.data[slot] = current.next
+                self.used_slots -= 1
+                return value
+            else:
+                while current is not None:
+                    if current.key == key:
+                        prev.next = current.next
+                        self.used_slots -= 1
+                        return current.value
+
+                    prev = current
+                    current = current.next
+
+
+    def get(self, key):
+        """
+        Retrieve the value stored with the given key.
+        Returns None if the key is not found.
+        Implement this.
+        """
+        # Your code here
+        slot = self.hash_index(key)
+        hash_entry = self.data[slot]
+
+        if hash_entry is None:
+            return
+        else:
+            current = self.data[slot]
+            while current is not None:
+                if current.key == key:
+                    return current.value
+
+                current = current.next
+
+
+    def resize(self, new_capacity):
+        """
+        Changes the capacity of the hash table and
+        rehashes all key/value pairs.
+        Implement this.
+        """
+        # Your code here
+        ht = HashTable(new_capacity)
+        for slot in self.data:
+            if slot is not None:
+                current = slot
+                while current is not None:
+                    ht.put(current.key, current.value)
+                    current = current.next
+
+        self.capacity = new_capacity
+        self.data = ht.data
+
+if __name__ == "__main__":
+    ht = HashTable(8)
+
+    ht.put("line_1", "'Twas brillig, and the slithy toves")
+    ht.put("line_2", "Did gyre and gimble in the wabe:")
+    ht.put("line_3", "All mimsy were the borogoves,")
+    ht.put("line_4", "And the mome raths outgrabe.")
+    ht.put("line_5", '"Beware the Jabberwock, my son!')
+    ht.put("line_6", "The jaws that bite, the claws that catch!")
+    ht.put("line_7", "Beware the Jubjub bird, and shun")
+    ht.put("line_8", 'The frumious Bandersnatch!"')
+    ht.put("line_9", "He took his vorpal sword in hand;")
+    ht.put("line_10", "Long time the manxome foe he sought--")
+    ht.put("line_11", "So rested he by the Tumtum tree")
+    ht.put("line_12", "And stood awhile in thought.")
+
+    print("")
+
+    # Test storing beyond capacity
+    for i in range(1, 13):
+        print(ht.get(f"line_{i}"))
+
+    # Test resizing
+    old_capacity = ht.get_num_slots()
+    ht.resize(ht.capacity * 2)
+    new_capacity = ht.get_num_slots()
+
+    print(f"\nResized from {old_capacity} to {new_capacity}.\n")
+
+    # Test if data intact after resizing
+    for i in range(1, 13):
+        print(ht.get(f"line_{i}"))
+
+    print("")
